@@ -1,0 +1,259 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Disciplinary Cases & Restorative Actions</h1>
+
+<section class="card">
+    <h2>Search and Filter Cases</h2>
+
+    <form method="GET" action="{{ url_for('cases') }}" class="grid">
+
+        <label class="wide">
+            Search student name, student number, case number, or category
+            <input
+                type="text"
+                name="q"
+                value="{{ q }}"
+                placeholder="Enter name, student ID, or case number...">
+        </label>
+
+        <label>
+            Restorative Action Status
+            <select name="action_status">
+                <option value="">All Statuses</option>
+                <option value="Pending" {% if action_status == 'Pending' %}selected{% endif %}>Pending</option>
+                <option value="In Progress" {% if action_status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                <option value="Completed" {% if action_status == 'Completed' %}selected{% endif %}>Completed</option>
+                <option value="Overdue" {% if action_status == 'Overdue' %}selected{% endif %}>Overdue</option>
+            </select>
+        </label>
+
+        <button class="primary">Search Records</button>
+        <a href="{{ url_for('cases') }}">Clear Search</a>
+
+    </form>
+</section>
+
+<section class="card">
+    <h2>Record a case</h2>
+    <p class="sub">Incident descriptions are encrypted before being stored.</p>
+
+    <form method="post" class="grid">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label>
+            Student *
+            <select name="student_id" required>
+                <option value="">Select student</option>
+                {% for s in students %}
+                <option value="{{ s.id }}">
+                    {{ s.student_number }} — {{ s.full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            Incident date *
+            <input type="date" name="incident_date" required>
+        </label>
+
+        <label>
+            Incident category *
+            <select name="category" id="incidentCategory" required>
+                <option value="">Select a category</option>
+                <option value="Attendance-Related Concern">Attendance-Related Concern</option>
+                <option value="Disruptive Behavior">Disruptive Behavior</option>
+                <option value="Disrespectful Conduct">Disrespectful Conduct</option>
+                <option value="Property or Facility Concern">Property or Facility Concern</option>
+                <option value="Unauthorized Access or Use">Unauthorized Access or Use</option>
+                <option value="Safety-Related Concern">Safety-Related Concern</option>
+                <option value="Academic Integrity Concern">Academic Integrity Concern</option>
+                <option value="Other">Other</option>
+            </select>
+        </label>
+
+        <label id="otherCategoryField" style="display: none;">
+            Specify other incident category *
+            <input
+                type="text"
+                name="other_category"
+                id="otherCategory"
+                maxlength="100"
+                placeholder="Enter incident category">
+        </label>
+
+        <label>
+            Classification
+            <select name="classification">
+                <option>For Review</option>
+                <option>Minor</option>
+                <option>Major</option>
+                <option>Other</option>
+            </select>
+        </label>
+
+        <label class="wide">
+            Incident description *
+            <textarea name="description" required></textarea>
+        </label>
+
+        <button class="primary">Create case</button>
+    </form>
+</section>
+
+{% for c in records %}
+
+<section class="card">
+
+    <div class="row">
+        <div>
+            <h2>{{ c.case_number }} · {{ c.student.full_name }}</h2>
+            <p class="sub">
+                {{ c.incident_date }} · {{ c.category }} · {{ c.classification }}
+            </p>
+        </div>
+
+        <span class="pill">{{ c.status }}</span>
+    </div>
+
+    <p>
+        <strong>Protected incident description:</strong>
+        {{ c.safe_description }}
+    </p>
+
+    <h3>Restorative commitments</h3>
+
+    {% for item in c.commitments %}
+
+    <div class="commit">
+
+        <div>
+            <strong>{{ item.action_type }}</strong> — {{ item.description }}
+            <br>
+            <small>
+                Due {{ item.due_date }} ·
+                {{ item.verified_hours }}/{{ item.required_hours }} hours ·
+                {{ item.status }}
+            </small>
+        </div>
+
+        {% if logged_in_user.role in ['Administrator', 'OSA Personnel', 'Restorative Supervisor'] %}
+
+        <form method="post"
+              action="{{ url_for('update_progress', item_id=item.id) }}"
+              class="inline">
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <input
+                type="number"
+                step="0.25"
+                min="0"
+                max="{{ item.required_hours }}"
+                name="verified_hours"
+                value="{{ item.verified_hours }}"
+                aria-label="Verified hours">
+
+            <button>Update</button>
+        </form>
+
+        {% endif %}
+
+        {% if logged_in_user.role in ['Administrator', 'Restorative Supervisor'] %}
+
+        <form method="post"
+              action="{{ url_for('verify_commitment', item_id=item.id) }}"
+              class="inline">
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <input
+                name="verification_note"
+                placeholder="Verification note">
+
+            <button>Verify</button>
+        </form>
+
+        {% endif %}
+
+    </div>
+
+    {% else %}
+
+    <p class="sub">No restorative commitments assigned.</p>
+
+    {% endfor %}
+
+    <form method="post"
+          action="{{ url_for('add_commitment', case_id=c.id) }}"
+          class="grid compact">
+
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label>
+            Action type
+            <select name="action_type">
+                <option>Reflection Activity</option>
+                <option>Community Service</option>
+                <option>Mediation / Dialogue</option>
+                <option>Other Approved Action</option>
+            </select>
+        </label>
+
+        <label>
+            Deadline
+            <input type="date" name="due_date" required>
+        </label>
+
+        <label>
+            Required hours (0 if not applicable)
+            <input
+                type="number"
+                step="0.25"
+                min="0"
+                name="required_hours"
+                value="0">
+        </label>
+
+        <label class="wide">
+            Commitment description
+            <input
+                name="description"
+                required
+                maxlength="500">
+        </label>
+
+        <button class="primary">Add commitment</button>
+
+    </form>
+
+</section>
+
+{% else %}
+
+<p>No cases recorded.</p>
+
+{% endfor %}
+
+<script>
+    const categorySelect = document.getElementById("incidentCategory");
+    const otherField = document.getElementById("otherCategoryField");
+    const otherInput = document.getElementById("otherCategory");
+
+    categorySelect.addEventListener("change", function () {
+
+        if (this.value === "Other") {
+            otherField.style.display = "flex";
+            otherInput.required = true;
+        } else {
+            otherField.style.display = "none";
+            otherInput.required = false;
+            otherInput.value = "";
+        }
+
+    });
+</script>
+
+{% endblock %}
