@@ -272,6 +272,11 @@
                 <br>
 
                 <small>Status: {{ item.status }}</small>
+                <br>
+                <small>
+                    Assigned Supervisor:
+                    {{ item.assigned_supervisor.full_name if item.assigned_supervisor else "Unassigned" }}
+                </small>
 
                 {% if item.status != "Completed" and item.due_date >= today and (item.due_date - today).days <= 7 %}
                 <br>
@@ -281,6 +286,25 @@
             </div>
         </div>
 
+
+        <!-- REASSIGN SUPERVISOR -->
+        {% if logged_in_user.role in ['Administrator', 'OSA Personnel'] and c.status == "Open" %}
+        <form method="post"
+              action="{{ url_for('assign_commitment', item_id=item.id) }}"
+              class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="assigned_supervisor_id" aria-label="Assigned supervisor">
+                <option value="">Unassigned</option>
+                {% for supervisor in supervisors %}
+                <option value="{{ supervisor.id }}"
+                    {% if item.assigned_supervisor_id == supervisor.id %}selected{% endif %}>
+                    {{ supervisor.full_name }}
+                </option>
+                {% endfor %}
+            </select>
+            <button type="submit">Save Assignment</button>
+        </form>
+        {% endif %}
 
         <!-- UPDATE PROGRESS -->
         {% if logged_in_user.role in ['Administrator', 'OSA Personnel', 'Restorative Supervisor'] %}
@@ -391,6 +415,50 @@
 </form>
 
 
+    {% endif %}
+
+
+    <!-- DELETE CASE ACTION: small red button at the bottom-right -->
+    {% if logged_in_user.role in ['Administrator', 'OSA Personnel'] and not c.commitments %}
+    <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+        <button type="button"
+                style="background: #b42318; color: white; border: 1px solid #b42318; padding: 8px 14px; border-radius: 6px; cursor: pointer;"
+                onclick="document.getElementById('delete-case-dialog-{{ c.id }}').showModal()">
+            Delete Case
+        </button>
+    </div>
+
+    <dialog id="delete-case-dialog-{{ c.id }}"
+            style="border: 1px solid #e5a09a; border-radius: 10px; padding: 22px; width: min(460px, calc(100% - 32px));">
+        <form method="post"
+              action="{{ url_for('delete_case', case_id=c.id) }}"
+              onsubmit="return confirm('Confirm permanent deletion of case {{ c.case_number }}?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <h3 style="margin-top: 0;">Delete Case {{ c.case_number }}</h3>
+            <p>Please explain why this case is being deleted. This explanation will be recorded in the Activity Log.</p>
+
+            <label for="delete-reason-{{ c.id }}">Reason for deletion</label>
+            <textarea id="delete-reason-{{ c.id }}"
+                      name="deletion_reason"
+                      maxlength="500"
+                      rows="4"
+                      required
+                      style="display: block; width: 100%; margin: 8px 0 16px; box-sizing: border-box;"
+                      placeholder="Enter the reason for deleting this case"></textarea>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button"
+                        onclick="document.getElementById('delete-case-dialog-{{ c.id }}').close()">
+                    Cancel
+                </button>
+                <button type="submit"
+                        style="background: #b42318; color: white; border: 1px solid #b42318; padding: 8px 14px; border-radius: 6px;">
+                    Confirm Delete
+                </button>
+            </div>
+        </form>
+    </dialog>
     {% endif %}
 
 </section>

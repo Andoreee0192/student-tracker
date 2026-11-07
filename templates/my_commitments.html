@@ -56,7 +56,11 @@
         {{ item.status }}
     </p>
 
-    {% if item.status != "Completed" %}
+    {% if item.case.status == "Closed" %}
+
+    <p><strong>This case is closed. No further updates or verification are available.</strong></p>
+
+    {% elif item.status != "Completed" %}
 
     <hr>
 

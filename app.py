@@ -1003,6 +1003,54 @@ def add_commitment(case_id):
 
 
 
+@app.route("/commitments/<int:item_id>/assign", methods=["POST"])
+@roles_required("Administrator", "OSA Personnel")
+def assign_commitment(item_id):
+    item = db.session.get(Commitment, item_id) or abort(404)
+
+    if item.case.status == "Closed":
+        flash("Cannot change the supervisor of a commitment under a closed case.", "danger")
+        return redirect(url_for("cases") + "#case-list")
+
+    supervisor_text = request.form.get("assigned_supervisor_id", "").strip()
+    new_supervisor_id = None
+
+    if supervisor_text:
+        try:
+            new_supervisor_id = int(supervisor_text)
+        except ValueError:
+            flash("Please select a valid supervisor.", "danger")
+            return redirect(url_for("cases") + "#case-list")
+
+        supervisor = db.session.get(User, new_supervisor_id)
+        if not supervisor or not supervisor.active or supervisor.role != "Restorative Supervisor":
+            flash("The selected supervisor is invalid or inactive.", "danger")
+            return redirect(url_for("cases") + "#case-list")
+
+    old_supervisor = item.assigned_supervisor
+    old_name = old_supervisor.full_name if old_supervisor else "Unassigned"
+
+    if item.assigned_supervisor_id == new_supervisor_id:
+        flash("This commitment is already assigned to that supervisor.", "info")
+        return redirect(url_for("cases") + "#case-list")
+
+    item.assigned_supervisor_id = new_supervisor_id
+    new_name = (
+        db.session.get(User, new_supervisor_id).full_name
+        if new_supervisor_id is not None else "Unassigned"
+    )
+
+    audit(
+        f"Changed commitment supervisor from {old_name} to {new_name}",
+        "Commitment",
+        item.id
+    )
+    db.session.commit()
+
+    flash("Commitment supervisor assignment updated.", "success")
+    return redirect(url_for("cases") + "#case-list")
+
+
 @app.route("/my-commitments")
 @roles_required("Restorative Supervisor")
 def my_commitments():
@@ -1069,6 +1117,49 @@ def update_progress(item_id):
 
     flash("Commitment progress updated.", "success")
     return redirect(destination)
+
+
+@app.route("/cases/<int:case_id>/delete", methods=["POST"])
+@roles_required("Administrator", "OSA Personnel")
+def delete_case(case_id):
+    case = db.session.get(Case, case_id) or abort(404)
+
+    reason = request.form.get("deletion_reason", "").strip()
+
+    if not is_valid_text(reason, 100):
+        flash(
+            "Please provide a deletion reason of no more than 100 characters.",
+            "danger"
+        )
+        return redirect(url_for("cases") + "#case-list")
+
+    # Permanent deletion is allowed only when the case has no commitments.
+    if Commitment.query.filter_by(case_id=case.id).first():
+        flash(
+            "This case cannot be deleted because it already has restorative commitments. "
+            "Use a controlled cancellation process instead.",
+            "warning"
+        )
+        return redirect(url_for("cases") + "#case-list")
+
+    case_id_value = case.id
+    case_number = case.case_number
+
+    # Keep a permanent audit entry even after the case record is deleted.
+    audit(
+        f"Deleted case {case_number}; reason: {reason}",
+        "Case",
+        case_id_value
+    )
+
+    db.session.delete(case)
+    db.session.commit()
+
+    flash(
+        f"Case {case_number} was deleted. The deletion was recorded in the Activity Log.",
+        "success"
+    )
+    return redirect(url_for("cases") + "#case-list")
 
 
 @app.route("/cases/<int:case_id>/status", methods=["POST"])
