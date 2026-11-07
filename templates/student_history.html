@@ -1,0 +1,118 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Student Disciplinary History</h1>
+
+<section class="card">
+
+    <h2>{{ student.full_name }}</h2>
+
+    <p class="sub">
+        Student Number: {{ student.student_number }}
+        · {{ student.program }}
+        · {{ student.year_level }}
+        · {{ student.section or 'No Section' }}
+    </p>
+
+    <p>
+        <strong>Total Recorded Cases:</strong> {{ records|length }}
+    </p>
+
+    <a href="{{ url_for('students') }}">Back to Student Records</a>
+
+</section>
+
+<section class="card">
+
+    <h2>Previous Disciplinary Records</h2>
+
+    {% if records %}
+
+    <table>
+        <tr>
+            <th>Case Number</th>
+            <th>Incident Date</th>
+            <th>Category</th>
+            <th>Classification</th>
+            <th>Occurrence</th>
+            <th>Case Status</th>
+        </tr>
+
+        {% for c in records %}
+        <tr>
+            <td>{{ c.case_number }}</td>
+            <td>{{ c.incident_date }}</td>
+            <td>{{ c.category }}</td>
+            <td>{{ c.classification }}</td>
+
+            <td>
+                {% if c.occurrence_number == 1 %}
+                    First
+                {% elif c.occurrence_number == 2 %}
+                    Second
+                {% elif c.occurrence_number == 3 %}
+                    Third
+                {% else %}
+                    {{ c.occurrence_number }}th
+                {% endif %}
+            </td>
+
+            <td>{{ c.status }}</td>
+        </tr>
+        {% endfor %}
+
+    </table>
+
+    {% else %}
+
+    <p>No previous disciplinary records found for this student.</p>
+
+    {% endif %}
+
+</section>
+
+{% if records %}
+
+{% for c in records %}
+
+<section class="card">
+
+    <h3>{{ c.case_number }} — {{ c.category }}</h3>
+
+    <p class="sub">
+        {{ c.incident_date }} · {{ c.classification }}
+    </p>
+
+    <p>
+        <strong>Incident Description:</strong><br>
+        {{ c.safe_description }}
+    </p>
+
+    <h3>Restorative Commitments</h3>
+
+    {% for item in c.commitments %}
+
+    <p>
+        <strong>{{ item.action_type }}</strong> — {{ item.description }}
+        <br>
+        <small>
+            Deadline: {{ item.due_date }}
+            · Status: {{ item.status }}
+        </small>
+    </p>
+
+    {% else %}
+
+    <p class="sub">No restorative commitments recorded.</p>
+
+    {% endfor %}
+
+</section>
+
+{% endfor %}
+
+{% endif %}
+
+{% endblock %}

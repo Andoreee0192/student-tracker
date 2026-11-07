@@ -1,4 +1,137 @@
-{% extends "base.html" %}{% block content %}
-<h1>Dashboard</h1><p class="sub">Overview of disciplinary cases and restorative commitments.</p>
-<div class="stats"><div class="card"><small>Total cases</small><strong>{{ total_cases }}</strong></div><div class="card"><small>Open cases</small><strong>{{ open_cases }}</strong></div><div class="card"><small>Pending actions</small><strong>{{ pending }}</strong></div><div class="card"><small>In progress</small><strong>{{ progress }}</strong></div><div class="card"><small>Completed</small><strong>{{ completed }}</strong></div><div class="card"><small>Overdue</small><strong>{{ overdue }}</strong></div></div>
-<section class="card"><h2>Recent cases</h2>{% if recent %}<table><tr><th>Case</th><th>Student</th><th>Incident date</th><th>Category</th><th>Classification</th><th>Status</th></tr>{% for c in recent %}<tr><td>{{ c.case_number }}</td><td>{{ c.student.full_name }}</td><td>{{ c.incident_date }}</td><td>{{ c.category }}</td><td>{{ c.classification }}</td><td>{{ c.status }}</td></tr>{% endfor %}</table>{% else %}<p>No cases recorded yet.</p>{% endif %}</section>{% endblock %}
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Dashboard</h1>
+<p class="sub">Overview of disciplinary cases and restorative commitments.</p>
+
+<!-- DASHBOARD STATISTICS -->
+<div class="stats">
+
+    <div class="card">
+        <small>Total Cases</small>
+        <strong>{{ total_cases }}</strong>
+    </div>
+
+    <div class="card">
+        <small>Open Cases</small>
+        <strong>{{ open_cases }}</strong>
+    </div>
+
+    <div class="card">
+        <small>Pending Actions</small>
+        <strong>{{ pending }}</strong>
+    </div>
+
+    <div class="card">
+        <small>In Progress</small>
+        <strong>{{ progress }}</strong>
+    </div>
+
+    <div class="card">
+        <small>Completed</small>
+        <strong>{{ completed }}</strong>
+    </div>
+
+    <div class="card">
+        <small>Overdue</small>
+        <strong>{{ overdue }}</strong>
+    </div>
+
+    <div class="card">
+        <small>Due Within 7 Days</small>
+        <strong>{{ due_soon }}</strong>
+    </div>
+
+</div>
+
+
+<!-- DEADLINE INDICATORS -->
+<section class="card">
+
+    <h2>Upcoming Restorative Commitment Deadlines</h2>
+
+    <p class="sub">
+        Commitments with deadlines within the next seven days.
+    </p>
+
+    {% if due_soon_items %}
+
+    <table>
+        <tr>
+            <th>Student</th>
+            <th>Case Number</th>
+            <th>Commitment</th>
+            <th>Deadline</th>
+            <th>Status</th>
+        </tr>
+
+        {% for item in due_soon_items %}
+
+        <tr>
+            <td>{{ item.case.student.full_name }}</td>
+            <td>{{ item.case.case_number }}</td>
+            <td>{{ item.description }}</td>
+            <td>{{ item.due_date }}</td>
+            <td>
+                <span class="pill" style="background: #fff3cd; color: #856404;">
+                    Due Soon
+                </span>
+            </td>
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+    {% else %}
+
+    <p>No upcoming deadlines within the next 7 days.</p>
+
+    {% endif %}
+
+</section>
+
+
+<!-- RECENT CASES -->
+<section class="card">
+
+    <h2>Recent Cases</h2>
+
+    {% if recent %}
+
+    <table>
+
+        <tr>
+            <th>Case</th>
+            <th>Student</th>
+            <th>Incident Date</th>
+            <th>Category</th>
+            <th>Classification</th>
+            <th>Status</th>
+        </tr>
+
+        {% for c in recent %}
+
+        <tr>
+            <td>{{ c.case_number }}</td>
+            <td>{{ c.student.full_name }}</td>
+            <td>{{ c.incident_date }}</td>
+            <td>{{ c.category }}</td>
+            <td>{{ c.classification }}</td>
+            <td>{{ c.status }}</td>
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+    {% else %}
+
+    <p>No cases recorded yet.</p>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}

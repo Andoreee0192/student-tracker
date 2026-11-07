@@ -231,6 +231,7 @@ def inject_globals():
 # DASHBOARD
 # =========================
 
+
 @app.route("/")
 @login_required
 def dashboard():
@@ -241,6 +242,15 @@ def dashboard():
 
     for item in all_items:
         item.status = refresh_commitment_status(item)
+
+    today = date.today()
+    warning_date = today + timedelta(days=7)
+
+    due_soon_items = [
+        item for item in all_items
+        if item.status != "Completed"
+        and today <= item.due_date <= warning_date
+    ]
 
     db.session.commit()
 
@@ -261,8 +271,11 @@ def dashboard():
         progress=progress,
         completed=completed,
         overdue=overdue,
+        due_soon=len(due_soon_items),
+        due_soon_items=due_soon_items,
         recent=recent
     )
+
 
 
 # =========================
@@ -320,6 +333,7 @@ def logout():
 # STUDENT MANAGEMENT
 # =========================
 
+
 @app.route("/students", methods=["GET", "POST"])
 @roles_required("Administrator", "OSA Personnel")
 def students():
@@ -375,8 +389,49 @@ def students():
 
 
 # =========================
+# STUDENT DISCIPLINARY HISTORY
+# =========================
+
+@app.route("/students/<int:student_id>/history")
+@roles_required("Administrator", "OSA Personnel", "Restorative Supervisor")
+def student_history(student_id):
+    student = db.session.get(Student, student_id) or abort(404)
+
+    records = Case.query.filter_by(
+        student_id=student.id
+    ).order_by(
+        Case.incident_date.asc(),
+        Case.created_at.asc(),
+        Case.id.asc()
+    ).all()
+
+    occurrence_counts = {}
+
+    for case in records:
+        key = case.category
+        occurrence_counts[key] = occurrence_counts.get(key, 0) + 1
+
+        case.occurrence_number = occurrence_counts[key]
+        case.safe_description = decrypt_text(
+            case.description_encrypted
+        )
+
+        for commitment in case.commitments:
+            commitment.status = refresh_commitment_status(commitment)
+
+    db.session.commit()
+
+    return render_template(
+        "student_history.html",
+        student=student,
+        records=records
+    )
+
+
+# =========================
 # DISCIPLINARY CASE MANAGEMENT
 # =========================
+
 
 
 @app.route("/cases", methods=["GET", "POST"])
@@ -402,16 +457,19 @@ def cases():
 
         try:
             parsed_date = date.fromisoformat(incident_date)
-        except ValueError:
+        except (ValueError, TypeError):
             parsed_date = None
 
         if not student or not parsed_date or not category or not description:
-            flash("Provide a valid student, date, category, and incident description.", "danger")
+            flash(
+                "Provide a valid student, date, category, and incident description.",
+                "danger"
+            )
         else:
-            number = f"OSA-{date.today().year}-{(Case.query.count()+1):04d}"
+            number = f"OSA-{date.today().year}-{(Case.query.count() + 1):04d}"
 
             while Case.query.filter_by(case_number=number).first():
-                number = f"OSA-{date.today().year}-{(Case.query.count()+1):04d}"
+                number = f"OSA-{date.today().year}-{(Case.query.count() + 1):04d}"
 
             obj = Case(
                 case_number=number,
@@ -425,18 +483,28 @@ def cases():
 
             db.session.add(obj)
             db.session.flush()
+
             audit("Created disciplinary case", "Case", obj.id)
             db.session.commit()
 
             flash(f"Case {number} created.", "success")
             return redirect(url_for("cases"))
 
-    # Search and filter
+    # Read search and filter values
     q = request.args.get("q", "").strip()
     action_status = request.args.get("action_status", "").strip()
+    assignment_status = request.args.get("assignment_status", "").strip()
+    incident_date_filter = request.args.get("incident_date", "").strip()
+    category_filter = request.args.get("category_filter", "").strip()
+    case_status = request.args.get("case_status", "").strip()
+    created_by = request.args.get("created_by", type=int)
 
-    query = Case.query.join(Student)
+    # Start the case query
+    query = Case.query.join(Student).outerjoin(
+        User, Case.created_by == User.id
+    )
 
+    # Search student, case number, category, or creator name
     if q:
         search_term = f"%{q}%"
         query = query.filter(
@@ -444,44 +512,178 @@ def cases():
                 Student.full_name.ilike(search_term),
                 Student.student_number.ilike(search_term),
                 Case.case_number.ilike(search_term),
-                Case.category.ilike(search_term)
+                Case.category.ilike(search_term),
+                User.full_name.ilike(search_term)
             )
         )
 
+    # Filter by incident date
+    if incident_date_filter:
+        try:
+            selected_date = date.fromisoformat(incident_date_filter)
+            query = query.filter(Case.incident_date == selected_date)
+        except ValueError:
+            flash("Invalid incident date filter.", "warning")
+
+    # Filter by violation category
+    if category_filter:
+        query = query.filter(Case.category == category_filter)
+
+    # Filter by case status
+    if case_status:
+        query = query.filter(Case.status == case_status)
+
+    # Filter by personnel who created the case
+    if created_by:
+        query = query.filter(Case.created_by == created_by)
+
+    # Retrieve matching cases
     records = query.order_by(Case.created_at.desc()).all()
+    
+    # Repeat Violation Counting Algorithm
+    all_cases = Case.query.order_by(
+        Case.incident_date.asc(),
+        Case.created_at.asc(),
+        Case.id.asc()
+    ).all()
 
-    # Calculate commitment statuses
-    for item in records:
-        item.safe_description = decrypt_text(item.description_encrypted)
+    occurrence_counts = {}
 
-        for commitment in item.commitments:
+    for historical_case in all_cases:
+        key = (
+            historical_case.student_id,
+            historical_case.category
+        )
+
+        occurrence_counts[key] = occurrence_counts.get(key, 0) + 1
+
+        historical_case.occurrence_number = occurrence_counts[key]
+
+    # Assign occurrence numbers to the currently displayed records
+    for case in records:
+        case.occurrence_number = occurrence_counts.get(
+            (case.student_id, case.category),
+            0
+        )
+
+
+    # Refresh commitment statuses and decrypt descriptions
+    for case in records:
+        case.safe_description = decrypt_text(case.description_encrypted)
+
+        for commitment in case.commitments:
             commitment.status = refresh_commitment_status(commitment)
 
-    # Filter cases by restorative commitment status
+    db.session.commit()
+
+      # Filter by restorative commitment status
     if action_status:
         records = [
             case for case in records
-            if any(
-                commitment.status == action_status
-                for commitment in case.commitments
-            )
+            if any(c.status == action_status for c in case.commitments)
         ]
 
+    # Filter by assignment status
+    if assignment_status == "Assigned":
+        records = [
+            case for case in records
+            if len(case.commitments) > 0
+        ]
+
+    elif assignment_status == "Unassigned":
+        records = [
+            case for case in records
+            if len(case.commitments) == 0
+        ]
+
+    # Data for dropdowns
     student_records = Student.query.order_by(Student.full_name).all()
+
+    categories = [
+        row[0] for row in db.session.query(Case.category)
+        .distinct()
+        .order_by(Case.category)
+        .all()
+    ]
+
+    personnel = User.query.filter_by(active=True).order_by(
+        User.full_name
+    ).all()
+
+    case_statuses = ["Open", "Closed"]
 
     return render_template(
         "cases.html",
         records=records,
         students=student_records,
         q=q,
-        action_status=action_status
+        action_status=action_status,
+        assignment_status=assignment_status,
+        incident_date_filter=incident_date_filter,
+        category_filter=category_filter,
+        case_status=case_status,
+        created_by=created_by,
+        categories=categories,
+        personnel=personnel,
+        case_statuses=case_statuses,
+        today=date.today()
     )
+
 
 
 
 # =========================
 # RESTORATIVE COMMITMENTS
 # =========================
+
+@app.route("/cases/<int:case_id>/status", methods=["POST"])
+@roles_required("Administrator", "OSA Personnel")
+def update_case_status(case_id):
+    case = db.session.get(Case, case_id) or abort(404)
+
+    new_status = request.form.get("status", "").strip()
+
+    if new_status not in ["Open", "Closed"]:
+        flash("Invalid case status.", "danger")
+        return redirect(url_for("cases"))
+
+    if new_status == case.status:
+        flash(f"Case is already {new_status}.", "info")
+        return redirect(url_for("cases"))
+
+    if new_status == "Closed":
+        for item in case.commitments:
+            item.status = refresh_commitment_status(item)
+
+        unfinished = [
+            item for item in case.commitments
+            if item.status != "Completed"
+        ]
+
+        if unfinished:
+            flash(
+                "This case cannot be closed because it has unfinished restorative commitments.",
+                "warning"
+            )
+            return redirect(url_for("cases"))
+
+    old_status = case.status
+    case.status = new_status
+
+    audit(
+        f"Changed case status from {old_status} to {new_status}",
+        "Case",
+        case.id
+    )
+
+    db.session.commit()
+
+    flash(
+        f"Case {case.case_number} is now {new_status}.",
+        "success"
+    )
+
+    return redirect(url_for("cases"))
 
 @app.route("/cases/<int:case_id>/commitments", methods=["POST"])
 @roles_required("Administrator", "OSA Personnel")
@@ -491,29 +693,15 @@ def add_commitment(case_id):
     action_type = request.form.get("action_type", "").strip()
     description = request.form.get("description", "").strip()
     due_raw = request.form.get("due_date", "")
-
-    required_hours = request.form.get(
-        "required_hours",
-        type=float,
-        default=0
-    )
+    required_hours = request.form.get("required_hours", type=float, default=0)
 
     try:
         due_date = date.fromisoformat(due_raw)
-    except ValueError:
+    except (ValueError, TypeError):
         due_date = None
 
-    if (
-        not action_type
-        or not description
-        or not due_date
-        or required_hours < 0
-    ):
-        flash(
-            "Enter a valid action, description, deadline, and non-negative hours.",
-            "danger"
-        )
-
+    if not action_type or not description or not due_date or required_hours < 0:
+        flash("Enter a valid action, description, deadline, and non-negative hours.", "danger")
     else:
         item = Commitment(
             case_id=case.id,
@@ -528,13 +716,12 @@ def add_commitment(case_id):
         db.session.flush()
 
         audit("Added restorative commitment", "Commitment", item.id)
+
         db.session.commit()
 
         flash("Restorative commitment added.", "success")
 
     return redirect(url_for("cases"))
-
-
 @app.route("/commitments/<int:item_id>/progress", methods=["POST"])
 @roles_required(
     "Administrator",
