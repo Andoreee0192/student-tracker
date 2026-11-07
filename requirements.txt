@@ -6,3 +6,4 @@ argon2-cffi==25.1.0
 cryptography==45.0.5
 python-dotenv==1.1.1
 gunicorn==23.0.0
+psycopg[binary]>=3.2,<4
