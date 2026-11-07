@@ -1,1 +1,206 @@
-{% extends "base.html" %}{% block content %}<h1>Reports & Statistics</h1><div class="stats"><div class="card"><small>Students</small><strong>{{ students_count }}</strong></div><div class="card"><small>Cases</small><strong>{{ cases_count }}</strong></div><div class="card"><small>Commitments</small><strong>{{ items_count }}</strong></div>{% for name in ['Pending','In Progress','Completed','Overdue'] %}<div class="card"><small>{{ name }}</small><strong>{{ counts.get(name,0) }}</strong></div>{% endfor %}</div><section class="card"><h2>Commitment status summary</h2><table><tr><th>Status</th><th>Count</th></tr>{% for name in ['Pending','In Progress','Completed','Overdue'] %}<tr><td>{{ name }}</td><td>{{ counts.get(name,0) }}</td></tr>{% endfor %}</table></section>{% endblock %}
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Reports & Statistics</h1>
+<p class="sub">Summary of student records, disciplinary cases, and restorative commitments.</p>
+
+
+<!-- GENERAL STATISTICS -->
+<div class="stats">
+
+    <div class="card">
+        <small>Students</small>
+        <strong>{{ students_count }}</strong>
+    </div>
+
+    <div class="card">
+        <small>Total Cases</small>
+        <strong>{{ cases_count }}</strong>
+    </div>
+
+    <div class="card">
+        <small>Total Commitments</small>
+        <strong>{{ items_count }}</strong>
+    </div>
+
+    <div class="card">
+        <small>Completed</small>
+        <strong>{{ counts.get('Completed', 0) }}</strong>
+    </div>
+
+    <div class="card">
+        <small>Overdue</small>
+        <strong>{{ counts.get('Overdue', 0) }}</strong>
+    </div>
+
+    <div class="card">
+        <small>Completion Rate</small>
+        <strong>{{ completion_percentage }}%</strong>
+    </div>
+
+</div>
+
+
+<!-- CASE STATUS REPORT -->
+<section class="card">
+
+    <h2>Disciplinary Case Status</h2>
+
+    <table>
+        <tr>
+            <th>Case Status</th>
+            <th>Number of Cases</th>
+        </tr>
+
+        {% for name in ['Open', 'Closed'] %}
+        <tr>
+            <td>{{ name }}</td>
+            <td>{{ case_status_counts.get(name, 0) }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</section>
+
+
+<!-- CASE CATEGORY REPORT -->
+<section class="card">
+
+    <h2>Cases by Incident Category</h2>
+
+    {% if category_counts %}
+
+    <table>
+        <tr>
+            <th>Incident Category</th>
+            <th>Number of Cases</th>
+        </tr>
+
+        {% for name, total in category_counts|dictsort %}
+        <tr>
+            <td>{{ name }}</td>
+            <td>{{ total }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    {% else %}
+
+    <p>No case records available.</p>
+
+    {% endif %}
+
+</section>
+
+
+<!-- CASE CLASSIFICATION REPORT -->
+<section class="card">
+
+    <h2>Cases by Classification</h2>
+
+    {% if classification_counts %}
+
+    <table>
+        <tr>
+            <th>Classification</th>
+            <th>Number of Cases</th>
+        </tr>
+
+        {% for name, total in classification_counts|dictsort %}
+        <tr>
+            <td>{{ name }}</td>
+            <td>{{ total }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    {% else %}
+
+    <p>No classification records available.</p>
+
+    {% endif %}
+
+</section>
+
+
+<!-- RESTORATIVE COMMITMENT REPORT -->
+<section class="card">
+
+    <h2>Restorative Commitment Status</h2>
+
+    <table>
+        <tr>
+            <th>Status</th>
+            <th>Number of Commitments</th>
+        </tr>
+
+        {% for name in ['Pending', 'In Progress', 'Completed', 'Overdue'] %}
+        <tr>
+            <td>{{ name }}</td>
+            <td>{{ counts.get(name, 0) }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</section>
+
+
+<!-- ACTION TYPE REPORT -->
+<section class="card">
+
+    <h2>Commitments by Action Type</h2>
+
+    {% if action_type_counts %}
+
+    <table>
+        <tr>
+            <th>Action Type</th>
+            <th>Number of Commitments</th>
+        </tr>
+
+        {% for name, total in action_type_counts|dictsort %}
+        <tr>
+            <td>{{ name }}</td>
+            <td>{{ total }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    {% else %}
+
+    <p>No restorative commitments available.</p>
+
+    {% endif %}
+
+</section>
+
+
+<!-- COMMUNITY SERVICE REPORT -->
+<section class="card">
+
+    <h2>Community Service Summary</h2>
+
+    <div class="stats">
+
+        <div class="card">
+            <small>Total Required Hours</small>
+            <strong>{{ service_required_hours }}</strong>
+        </div>
+
+        <div class="card">
+            <small>Completed Hours</small>
+            <strong>{{ service_completed_hours }}</strong>
+        </div>
+
+        <div class="card">
+            <small>Remaining Hours</small>
+            <strong>{{ service_remaining_hours }}</strong>
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}

@@ -1,0 +1,130 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>My Assigned Commitments</h1>
+
+<p class="sub">
+    View your assigned restorative commitments, update progress,
+    and verify completed activities.
+</p>
+
+{% for item in commitments %}
+
+<section class="card">
+
+    <h2>{{ item.action_type }}</h2>
+
+    <p>
+        <strong>Student:</strong>
+        {{ item.case.student.full_name }}
+    </p>
+
+    <p>
+        <strong>Case Number:</strong>
+        {{ item.case.case_number }}
+    </p>
+
+    <p>
+        <strong>Description:</strong>
+        {{ item.description }}
+    </p>
+
+    <p>
+        <strong>Deadline:</strong>
+        {{ item.due_date }}
+    </p>
+
+    <p>
+        <strong>Required Hours:</strong>
+        {{ item.required_hours|round(2) }}
+    </p>
+
+    <p>
+        <strong>Verified Hours:</strong>
+        {{ item.verified_hours|round(2) }}
+    </p>
+
+    <p>
+        <strong>Remaining Hours:</strong>
+        {{ [0, item.required_hours - item.verified_hours]|max|round(2) }}
+    </p>
+
+    <p>
+        <strong>Status:</strong>
+        {{ item.status }}
+    </p>
+
+    {% if item.status != "Completed" %}
+
+    <hr>
+
+    <h3>Update Progress</h3>
+
+    <form method="post"
+          action="{{ url_for('update_progress', item_id=item.id) }}"
+          class="inline">
+
+        <input type="hidden" name="csrf_token"
+               value="{{ csrf_token() }}">
+
+        <label>Verified hours
+            <input type="number"
+                   step="0.25"
+                   min="0"
+                   max="{{ item.required_hours }}"
+                   name="verified_hours"
+                   value="{{ item.verified_hours }}"
+                   required>
+        </label>
+
+        <button type="submit">Update Progress</button>
+
+    </form>
+
+    <hr>
+
+    <h3>Verify Commitment</h3>
+
+    <form method="post"
+          action="{{ url_for('verify_commitment', item_id=item.id) }}">
+
+        <input type="hidden" name="csrf_token"
+               value="{{ csrf_token() }}">
+
+        <label>Verification note
+            <input name="verification_note"
+                   maxlength="500"
+                   placeholder="Enter verification details"
+                   required>
+        </label>
+
+        <button type="submit" class="primary">Verify Commitment</button>
+
+    </form>
+
+    {% else %}
+
+    <p><strong>This commitment has been completed and verified.</strong></p>
+
+    {% if item.verification_note %}
+    <p>
+        <strong>Verification Note:</strong>
+        {{ item.verification_note }}
+    </p>
+    {% endif %}
+
+    {% endif %}
+
+</section>
+
+{% else %}
+
+<section class="card">
+    <p>You currently have no assigned commitments.</p>
+</section>
+
+{% endfor %}
+
+{% endblock %}

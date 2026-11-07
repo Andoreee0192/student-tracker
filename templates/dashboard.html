@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block content %}
@@ -46,7 +47,73 @@
 </div>
 
 
-<!-- DEADLINE INDICATORS -->
+<!-- COMMUNITY SERVICE MONITORING -->
+<section class="card">
+
+    <h2>Community Service Monitoring</h2>
+    <p class="sub">Summary of assigned and completed community service hours.</p>
+
+    <div class="stats">
+
+        <div class="card">
+            <small>Total Required Hours</small>
+            <strong>{{ service_required_hours }}</strong>
+        </div>
+
+        <div class="card">
+            <small>Verified Completed Hours</small>
+            <strong>{{ service_verified_hours }}</strong>
+        </div>
+
+        <div class="card">
+            <small>Remaining Hours</small>
+            <strong>{{ service_remaining_hours }}</strong>
+        </div>
+
+        <div class="card">
+            <small>Completed Service Commitments</small>
+            <strong>{{ service_completed }}</strong>
+        </div>
+
+    </div>
+
+    {% if service_items %}
+
+    <table>
+        <tr>
+            <th>Student</th>
+            <th>Case Number</th>
+            <th>Required Hours</th>
+            <th>Completed Hours</th>
+            <th>Remaining Hours</th>
+            <th>Status</th>
+        </tr>
+
+        {% for item in service_items %}
+        <tr>
+            <td>{{ item.case.student.full_name }}</td>
+            <td>{{ item.case.case_number }}</td>
+            <td>{{ item.required_hours|round(2) }}</td>
+            <td>{{ item.verified_hours|round(2) }}</td>
+            <td>
+                {{ [0, item.required_hours - item.verified_hours]|max|round(2) }}
+            </td>
+            <td>{{ item.status }}</td>
+        </tr>
+        {% endfor %}
+
+    </table>
+
+    {% else %}
+
+    <p>No community service commitments recorded yet.</p>
+
+    {% endif %}
+
+</section>
+
+
+<!-- UPCOMING DEADLINES -->
 <section class="card">
 
     <h2>Upcoming Restorative Commitment Deadlines</h2>
@@ -67,19 +134,13 @@
         </tr>
 
         {% for item in due_soon_items %}
-
         <tr>
             <td>{{ item.case.student.full_name }}</td>
             <td>{{ item.case.case_number }}</td>
             <td>{{ item.description }}</td>
             <td>{{ item.due_date }}</td>
-            <td>
-                <span class="pill" style="background: #fff3cd; color: #856404;">
-                    Due Soon
-                </span>
-            </td>
+            <td>Due Soon</td>
         </tr>
-
         {% endfor %}
 
     </table>
@@ -87,6 +148,47 @@
     {% else %}
 
     <p>No upcoming deadlines within the next 7 days.</p>
+
+    {% endif %}
+
+</section>
+
+
+<!-- OVERDUE COMMITMENTS -->
+<section class="card">
+
+    <h2>Overdue Restorative Commitments</h2>
+
+    <p class="sub">
+        Commitments that have passed their deadlines and are not yet completed.
+    </p>
+
+    {% if overdue_items %}
+
+    <table>
+        <tr>
+            <th>Student</th>
+            <th>Case Number</th>
+            <th>Commitment</th>
+            <th>Deadline</th>
+            <th>Status</th>
+        </tr>
+
+        {% for item in overdue_items %}
+        <tr>
+            <td>{{ item.case.student.full_name }}</td>
+            <td>{{ item.case.case_number }}</td>
+            <td>{{ item.description }}</td>
+            <td>{{ item.due_date }}</td>
+            <td>Overdue</td>
+        </tr>
+        {% endfor %}
+
+    </table>
+
+    {% else %}
+
+    <p>No overdue commitments.</p>
 
     {% endif %}
 
@@ -101,7 +203,6 @@
     {% if recent %}
 
     <table>
-
         <tr>
             <th>Case</th>
             <th>Student</th>
@@ -112,7 +213,6 @@
         </tr>
 
         {% for c in recent %}
-
         <tr>
             <td>{{ c.case_number }}</td>
             <td>{{ c.student.full_name }}</td>
@@ -121,7 +221,6 @@
             <td>{{ c.classification }}</td>
             <td>{{ c.status }}</td>
         </tr>
-
         {% endfor %}
 
     </table>

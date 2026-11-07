@@ -2,110 +2,26 @@
 
 {% block content %}
 
+<style>
+    .pill-closed {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffe69c;
+    }
+</style>
+
+
 <h1>Disciplinary Cases & Restorative Actions</h1>
-
-<!-- SEARCH AND FILTER -->
-<section class="card">
-    <h2>Search and Filter Cases</h2>
-
-    <form method="GET" action="{{ url_for('cases') }}" class="grid">
-
-        <label class="wide">
-            Search Records
-            <input type="text" name="q" value="{{ q }}"
-                   placeholder="Student name, student number, case number, or personnel name">
-        </label>
-
-        <label>
-            Incident Date
-            <input type="date" name="incident_date" value="{{ incident_date_filter }}">
-        </label>
-
-        <label>
-            Violation Category
-            <select name="category_filter">
-                <option value="">All Categories</option>
-                {% for category in categories %}
-                <option value="{{ category }}"
-                    {% if category_filter == category %}selected{% endif %}>
-                    {{ category }}
-                </option>
-                {% endfor %}
-            </select>
-        </label>
-
-        <label>
-            Case Status
-            <select name="case_status">
-                <option value="">All Case Statuses</option>
-                {% for status in case_statuses %}
-                <option value="{{ status }}"
-                    {% if case_status == status %}selected{% endif %}>
-                    {{ status }}
-                </option>
-                {% endfor %}
-            </select>
-        </label>
-
-        <label>
-            Created By (OSA Personnel)
-            <select name="created_by">
-                <option value="">All Personnel</option>
-                {% for person in personnel %}
-                <option value="{{ person.id }}"
-                    {% if created_by == person.id %}selected{% endif %}>
-                    {{ person.full_name }}
-                </option>
-                {% endfor %}
-            </select>
-        </label>
-
-        <label>
-            Restorative Action Status
-            <select name="action_status">
-                <option value="">All Statuses</option>
-                <option value="Pending" {% if action_status == 'Pending' %}selected{% endif %}>Pending</option>
-                <option value="In Progress" {% if action_status == 'In Progress' %}selected{% endif %}>In Progress</option>
-                <option value="Completed" {% if action_status == 'Completed' %}selected{% endif %}>Completed</option>
-                <option value="Overdue" {% if action_status == 'Overdue' %}selected{% endif %}>Overdue</option>
-            </select>
-        </label>
-
-        <!-- NEW: ASSIGNMENT STATUS FILTER -->
-        <label>
-            Assignment Status
-            <select name="assignment_status">
-                <option value="">All Cases</option>
-                <option value="Assigned"
-                    {% if assignment_status == 'Assigned' %}selected{% endif %}>
-                    Assigned
-                </option>
-                <option value="Unassigned"
-                    {% if assignment_status == 'Unassigned' %}selected{% endif %}>
-                    Unassigned
-                </option>
-            </select>
-        </label>
-
-        <div class="wide">
-            <button type="submit" class="primary">Search Records</button>
-            <a href="{{ url_for('cases') }}">Clear Filters</a>
-        </div>
-
-    </form>
-</section>
-
 
 <!-- RECORD A CASE -->
 <section class="card">
-    <h2>Record a Case</h2>
+    <h2>Record a case</h2>
     <p class="sub">Incident descriptions are encrypted before being stored.</p>
 
     <form method="post" class="grid">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <label>
-            Student *
+        <label>Student *
             <select name="student_id" required>
                 <option value="">Select student</option>
                 {% for s in students %}
@@ -116,13 +32,11 @@
             </select>
         </label>
 
-        <label>
-            Incident Date *
+        <label>Incident date *
             <input type="date" name="incident_date" required>
         </label>
 
-        <label>
-            Incident Category *
+        <label>Incident category *
             <select name="category" id="incidentCategory" required>
                 <option value="">Select a category</option>
                 <option value="Attendance-Related Concern">Attendance-Related Concern</option>
@@ -136,15 +50,7 @@
             </select>
         </label>
 
-        <label id="otherCategoryField" style="display: none;">
-            Specify Other Incident Category *
-            <input type="text" name="other_category"
-                   id="otherCategory" maxlength="100"
-                   placeholder="Enter incident category">
-        </label>
-
-        <label>
-            Classification
+        <label>Classification
             <select name="classification">
                 <option>For Review</option>
                 <option>Minor</option>
@@ -153,88 +59,184 @@
             </select>
         </label>
 
-        <label class="wide">
-            Incident Description *
+        <label class="wide">If category is Other, specify:
+            <input
+                type="text"
+                name="other_category"
+                maxlength="90"
+                placeholder="Specify other incident category">
+        </label>
+
+        <label class="wide">Incident description *
             <textarea name="description" required></textarea>
         </label>
 
-        <button type="submit" class="primary">Create Case</button>
+        <button type="submit" class="primary">Create case</button>
+    </form>
+</section>
+
+
+<!-- SEARCH AND FILTERS -->
+<section class="card">
+    <h2>Search and Filter Cases</h2>
+
+    <form method="get"
+          action="{{ url_for('cases') }}#case-list"
+          class="grid compact">
+
+        <label class="wide">Search
+            <input
+                type="text"
+                name="q"
+                value="{{ q }}"
+                placeholder="Search student, student number, case number, category, or personnel">
+        </label>
+
+        <label>Incident Date
+            <input
+                type="date"
+                name="incident_date"
+                value="{{ incident_date_filter }}">
+        </label>
+
+        <label>Category
+            <select name="category_filter">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                <option value="{{ category }}"
+                    {% if category_filter == category %}selected{% endif %}>
+                    {{ category }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>Case Status
+            <select name="case_status">
+                <option value="">All Case Statuses</option>
+                {% for status in case_statuses %}
+                <option value="{{ status }}"
+                    {% if case_status == status %}selected{% endif %}>
+                    {{ status }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>Created By
+            <select name="created_by">
+                <option value="">All Personnel</option>
+                {% for person in personnel %}
+                <option value="{{ person.id }}"
+                    {% if created_by == person.id %}selected{% endif %}>
+                    {{ person.full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>Restorative Action Status
+            <select name="action_status">
+                <option value="">All Action Statuses</option>
+                <option value="Pending" {% if action_status == "Pending" %}selected{% endif %}>Pending</option>
+                <option value="In Progress" {% if action_status == "In Progress" %}selected{% endif %}>In Progress</option>
+                <option value="Completed" {% if action_status == "Completed" %}selected{% endif %}>Completed</option>
+                <option value="Overdue" {% if action_status == "Overdue" %}selected{% endif %}>Overdue</option>
+            </select>
+        </label>
+
+        <label>Assignment Status
+            <select name="assignment_status">
+                <option value="">All Cases</option>
+                <option value="Assigned" {% if assignment_status == "Assigned" %}selected{% endif %}>Assigned</option>
+                <option value="Unassigned" {% if assignment_status == "Unassigned" %}selected{% endif %}>Unassigned</option>
+            </select>
+        </label>
+
+        <button type="submit" class="primary">Apply Filters</button>
+
+        <a href="{{ url_for('cases') }}#case-list">Clear Filters</a>
+
     </form>
 </section>
 
 
 <!-- CASE RECORDS -->
+<div id="case-list">
+
 {% for c in records %}
 
 <section class="card">
 
     <!-- CASE HEADER -->
-    <div class="row">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+
         <div>
             <h2>{{ c.case_number }} · {{ c.student.full_name }}</h2>
 
             <p class="sub">
-                Incident Date: {{ c.incident_date }} ·
-                Category: {{ c.category }} ·
-                Classification: {{ c.classification }}
+                {{ c.incident_date }} · {{ c.category }} · {{ c.classification }}
             </p>
 
             <p class="sub">
-                Recorded By: {{ c.creator.full_name if c.creator else 'Unknown' }} ·
-                Date Recorded: {{ c.created_at.strftime('%Y-%m-%d %I:%M %p') }}
+                Recorded By: {{ c.creator.full_name }}
+                · Date Recorded: {{ c.created_at.strftime('%Y-%m-%d') }}
             </p>
 
-            <p>
-                <strong>Occurrence:</strong>
-
+            <p class="sub">
+                Occurrence:
                 {% if c.occurrence_number == 1 %}
                     First Occurrence
                 {% elif c.occurrence_number == 2 %}
                     Second Occurrence
                 {% elif c.occurrence_number == 3 %}
                     Third Occurrence
-                {% elif c.occurrence_number > 3 %}
-                    {{ c.occurrence_number }}th Occurrence
                 {% else %}
-                    Not calculated
+                    {{ c.occurrence_number }}th Occurrence
                 {% endif %}
             </p>
         </div>
 
         <!-- CASE STATUS AND BUTTON -->
-        <div class="inline">
-            <span class="pill">{{ c.status }}</span>
+        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+
+            <span class="pill {% if c.status == 'Closed' %}pill-closed{% endif %}">
+                {{ c.status }}
+            </span>
 
             {% if logged_in_user.role in ['Administrator', 'OSA Personnel'] %}
-            <form method="POST"
+
+            <form method="post"
                   action="{{ url_for('update_case_status', case_id=c.id) }}"
-                  class="inline"
-                  onsubmit="return confirm('Are you sure you want to change this case status?');">
+                  style="margin: 0;">
 
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                {% if c.status == 'Open' %}
+                {% if c.status == "Open" %}
                     <input type="hidden" name="status" value="Closed">
                     <button type="submit">Close Case</button>
                 {% else %}
                     <input type="hidden" name="status" value="Open">
                     <button type="submit">Reopen Case</button>
                 {% endif %}
+
             </form>
             {% endif %}
+
         </div>
+
     </div>
 
 
     <!-- INCIDENT DESCRIPTION -->
     <p>
-        <strong>Protected Incident Description:</strong>
+        <strong>Protected incident description:</strong>
         {{ c.safe_description }}
     </p>
 
 
     <!-- RESTORATIVE COMMITMENTS -->
-    <h3>Restorative Commitments</h3>
+    <h3>Restorative commitments</h3>
 
     {% for item in c.commitments %}
 
@@ -244,50 +246,36 @@
             <strong>{{ item.action_type }}</strong> — {{ item.description }}
 
             <br>
+            <small>Due {{ item.due_date }}</small>
 
-            <small>
-                Due {{ item.due_date }} ·
-                {{ item.verified_hours }}/{{ item.required_hours }} hours
-            </small>
+            <div style="margin-top: 8px;">
 
-            <!-- STATUS BADGE -->
-            <div style="display:block; margin-top:10px;">
+                <small>
+                    Required Hours:
+                    {{ item.required_hours|round(2) }}
+                </small>
 
-                {% if item.status == 'Completed' %}
+                <br>
 
-                    <span class="pill"
-                          style="display:inline-block; padding:5px 10px; background:#dcfce7; color:#166534;">
-                        Completed
-                    </span>
+                <small>
+                    Verified Completed Hours:
+                    {{ item.verified_hours|round(2) }}
+                </small>
 
-                {% elif item.status == 'Overdue' %}
+                <br>
 
-                    <span class="pill"
-                          style="display:inline-block; padding:5px 10px; background:#fee2e2; color:#991b1b;">
-                        Overdue
-                    </span>
+                <strong>
+                    Remaining Hours:
+                    {{ [0, item.required_hours - item.verified_hours]|max|round(2) }}
+                </strong>
 
-                {% elif item.due_date >= today and (item.due_date - today).days <= 7 %}
+                <br>
 
-                    <span class="pill"
-                          style="display:inline-block; padding:5px 10px; background:#fef3c7; color:#92400e;">
-                        Due Soon
-                    </span>
+                <small>Status: {{ item.status }}</small>
 
-                {% elif item.status == 'In Progress' %}
-
-                    <span class="pill"
-                          style="display:inline-block; padding:5px 10px; background:#dbeafe; color:#1e40af;">
-                        In Progress
-                    </span>
-
-                {% else %}
-
-                    <span class="pill"
-                          style="display:inline-block; padding:5px 10px;">
-                        Pending
-                    </span>
-
+                {% if item.status != "Completed" and item.due_date >= today and (item.due_date - today).days <= 7 %}
+                <br>
+                <small><strong>Deadline reminder: Due Soon</strong></small>
                 {% endif %}
 
             </div>
@@ -297,37 +285,50 @@
         <!-- UPDATE PROGRESS -->
         {% if logged_in_user.role in ['Administrator', 'OSA Personnel', 'Restorative Supervisor'] %}
 
+        {% if item.status != "Completed" %}
+
         <form method="post"
               action="{{ url_for('update_progress', item_id=item.id) }}"
               class="inline">
 
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <input type="number" step="0.25" min="0"
+            <input type="number"
+                   step="0.25"
+                   min="0"
                    max="{{ item.required_hours }}"
                    name="verified_hours"
                    value="{{ item.verified_hours }}"
                    aria-label="Verified hours">
 
             <button type="submit">Update</button>
+
         </form>
 
         {% endif %}
+        {% endif %}
 
 
-        <!-- VERIFY COMMITMENT -->
+        <!-- VERIFICATION -->
         {% if logged_in_user.role in ['Administrator', 'Restorative Supervisor'] %}
+
+        {% if item.status != "Completed" %}
 
         <form method="post"
               action="{{ url_for('verify_commitment', item_id=item.id) }}"
               class="inline">
 
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input name="verification_note" placeholder="Verification note">
+
+            <input name="verification_note"
+                   placeholder="Verification note"
+                   maxlength="500">
 
             <button type="submit">Verify</button>
+
         </form>
 
+        {% endif %}
         {% endif %}
 
     </div>
@@ -340,69 +341,68 @@
 
 
     <!-- ADD COMMITMENT -->
-    <form method="post"
-          action="{{ url_for('add_commitment', case_id=c.id) }}"
-          class="grid compact">
+    {% if logged_in_user.role in ['Administrator', 'OSA Personnel'] %}
 
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+<form method="post"
+      action="{{ url_for('add_commitment', case_id=c.id) }}"
+      class="grid compact">
 
-        <label>
-            Action Type
-            <select name="action_type">
-                <option>Reflection Activity</option>
-                <option>Community Service</option>
-                <option>Mediation / Dialogue</option>
-                <option>Other Approved Action</option>
-            </select>
-        </label>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <label>
-            Deadline
-            <input type="date" name="due_date" required>
-        </label>
+    <label>Action type
+        <select name="action_type">
+            <option>Reflection Activity</option>
+            <option>Community Service</option>
+            <option>Mediation / Dialogue</option>
+            <option>Other Approved Action</option>
+        </select>
+    </label>
 
-        <label>
-            Required Hours (0 if not applicable)
-            <input type="number" step="0.25" min="0"
-                   name="required_hours" value="0">
-        </label>
+    <label>Deadline
+        <input type="date" name="due_date" required>
+    </label>
 
-        <label class="wide">
-            Commitment Description
-            <input name="description" required maxlength="500">
-        </label>
+    <label>Required hours (0 if not applicable)
+        <input type="number"
+               step="0.25"
+               min="0"
+               name="required_hours"
+               value="0">
+    </label>
 
-        <button type="submit" class="primary">Add Commitment</button>
+    <label>Assigned Restorative Supervisor
+        <select name="assigned_supervisor_id">
+            <option value="">Unassigned</option>
+            {% for supervisor in supervisors %}
+                <option value="{{ supervisor.id }}">
+                    {{ supervisor.full_name }}
+                </option>
+            {% endfor %}
+        </select>
+    </label>
 
-    </form>
+    <label class="wide">Commitment description
+        <input name="description" required maxlength="500">
+    </label>
+
+    <button type="submit" class="primary">Add commitment</button>
+
+</form>
+
+
+    {% endif %}
 
 </section>
 
 {% else %}
 
-<p>No cases found matching your search or filters.</p>
+<section class="card">
+    <p>No cases found. Try changing your search or filters.</p>
+</section>
 
 {% endfor %}
 
-
-<!-- OTHER CATEGORY FIELD -->
-<script>
-    const categorySelect = document.getElementById("incidentCategory");
-    const otherField = document.getElementById("otherCategoryField");
-    const otherInput = document.getElementById("otherCategory");
-
-    if (categorySelect) {
-        categorySelect.addEventListener("change", function () {
-            if (this.value === "Other") {
-                otherField.style.display = "flex";
-                otherInput.required = true;
-            } else {
-                otherField.style.display = "none";
-                otherInput.required = false;
-                otherInput.value = "";
-            }
-        });
-    }
-</script>
+</div>
 
 {% endblock %}
